@@ -9,11 +9,9 @@
 #include "threadpool.h"
 #include "reactor.h"
 #include "http.h"
+#include "configure.h"
 
-#define REACOR    1
-
-/*in default, the I/O model is threadpool*/
-#ifndef REACOR
+#define LT_MODE 1
 
 int main()
 {
@@ -23,72 +21,60 @@ int main()
 	threadpool_t		*pool;
 	int			reuseaddr = 1;
 
-	listenfd = socket(AF_INET, SOCK_STREAM, 0);
-	bzero(&servaddr, sizeof(servaddr));
-	servaddr.sin_family      = AF_INET;
-	servaddr.sin_addr.s_addr = htonl(INADDR_ANY);
-	servaddr.sin_port        = htons(8888);
-
-	setsockopt(listenfd, SOL_SOCKET, SO_REUSEADDR, &reuseaddr, sizeof(reuseaddr));
-	bind(listenfd, (struct sockaddr *) &servaddr, sizeof(servaddr));
-	listen(listenfd, LISTENQ);
-
-	pool = threadpool_create(4, 10);
-
-	for ( ; ; ) {
-		clilen = sizeof(cliaddr);
-		connfd = accept(listenfd, (struct sockaddr *) &cliaddr, &clilen);
-		threadpool_add(pool, (cb_fun)*handle_http, (void *)connfd);
-	}
-
-	threadpool_destory(pool, TP_LINGER);
-	close(listenfd);
-
-	return 0;
-}
-
-#else
-
-#define LT_MODE 1
-
-int main()
-{
 	int			ret;
-	int 			listen_fd;
 	int			epoll_fd;
 	struct epoll_event	events[MAX_EVENT_NUMBER];
-	struct sockaddr_in	servaddr;
-	int			reuseaddr = 1;
+
+        start_conf();
+
+	listenfd = socket(AF_INET, SOCK_STREAM, 0);
+        if (listenfd == -1)
+                fprintf(stderr, "socket error\n");
 
 	bzero(&servaddr, sizeof(servaddr));
 	servaddr.sin_family      = AF_INET;
 	servaddr.sin_addr.s_addr = htonl(INADDR_ANY);
-	servaddr.sin_port        = htons(8888);
+	servaddr.sin_port        = htons(80);
 
-	listen_fd = socket(AF_INET, SOCK_STREAM, 0);
-	setsockopt(listen_fd, SOL_SOCKET, SO_REUSEADDR, &reuseaddr, sizeof(reuseaddr));
-	bind(listen_fd, (struct sockaddr *)&servaddr, sizeof(servaddr));
-	listen(listen_fd, 5);
+	ret = setsockopt(listenfd, SOL_SOCKET, SO_REUSEADDR, &reuseaddr, sizeof(reuseaddr));
+        if (ret == -1)
+                fprintf(stderr, "setsockopt error\n");
 
-	epoll_fd = epoll_create(5);
-#ifdef LT_MODE
-	add_to_epoll(epoll_fd, listen_fd, false);
-#else
-	add_to_epoll(epoll_fd, listen_fd, true);
-#endif
+	ret = bind(listenfd, (struct sockaddr *) &servaddr, sizeof(servaddr));
+        if (ret == -1)
+                fprintf(stderr, "bind error\n");
 
-	for ( ;; ) {
-		ret = epoll_wait(epoll_fd, events, MAX_EVENT_NUMBER, -1);
-		if (ret < 0)
-			fprintf(stderr, "epoll_wait error\n");
-#ifdef LT_MODE
-		lt(events, ret, epoll_fd, listen_fd);
-#else
-		et(events, ret, epoll_fd, listen_fd);
-#endif
-	}
+	ret = listen(listenfd, LISTENQ);
+        if (ret == -1)
+                fprintf(stderr, "listen error\n");
+
+
+        if (conf[MODEL_SUB].value == MODEL_REACTOR) {
+
+                epoll_fd = epoll_create(5);
+                add_to_epoll(epoll_fd, listenfd, LT_MODE ? false : true);
+
+                for ( ;; ) {
+                        ret = epoll_wait(epoll_fd, events, MAX_EVENT_NUMBER, -1);
+                        if (ret < 0)
+                                fprintf(stderr, "epoll_wait error\n");
+
+                        LT_MODE ? lt(events, ret, epoll_fd, listenfd) :
+                                et(events, ret, epoll_fd, listenfd);
+                }
+
+        } else {
+                pool = threadpool_create(4, 10);
+
+                for ( ; ; ) {
+                        clilen = sizeof(cliaddr);
+                        connfd = accept(listenfd, (struct sockaddr *) &cliaddr, &clilen);
+                        threadpool_add(pool, (cb_fun)*handle_http, (void *)connfd);
+                }
+
+                threadpool_destory(pool, TP_LINGER);
+                close(listenfd);
+        }
 
 	return 0;
 }
-
-#endif

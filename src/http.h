@@ -6,7 +6,7 @@
 #define LISTENQ 100
 
 #define	DATA_PATH "./www-data"
-#define RECORD_FILE "http_record"
+#define RECORD_FILE "./log/http_record"
 
 void *handle_http(int fd);
 
