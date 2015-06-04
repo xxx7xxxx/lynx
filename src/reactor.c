@@ -21,7 +21,7 @@ add_to_epoll(int epoll_fd, int add_fd, bool et)
 	event.events = EPOLLIN;
 	event.data.fd = add_fd;
 	if (et)
-		event.events |= EPOLLET;
+		; //event.events |= EPOLLET;
 	epoll_ctl(epoll_fd, EPOLL_CTL_ADD, add_fd, &event);
 	set_nonblock(add_fd);
 }
@@ -56,7 +56,6 @@ void lt(struct epoll_event *events, int num_event,
 			else
 				add_to_epoll(epoll_fd, client_fd, false);
 		} else if (events[i].events & EPOLLIN){
-			printf("event trigger once\n");
 			handle_http(sock_fd);
 			epoll_ctl(epoll_fd, EPOLL_CTL_DEL, sock_fd, NULL);
 		}
@@ -84,11 +83,8 @@ void et(struct epoll_event *events, int num_event,
 			else
 				add_to_epoll(epoll_fd, client_fd, true);//different
 		} else if (events[i].events & EPOLLIN){
-			printf("event trigger once\n");
 			handle_http(sock_fd);
 			epoll_ctl(epoll_fd, EPOLL_CTL_DEL, sock_fd, NULL);
-		} else {
-			printf("something else happen\n");
 		}
 	}
 

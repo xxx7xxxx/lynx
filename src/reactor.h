@@ -1,7 +1,7 @@
 #ifndef _REACTOR_H
 #define _REACTOR_H
 
-#define MAX_EVENT_NUMBER 	1024
+#define MAX_EVENT_NUMBER 	4096
 
 void add_to_epoll(int epoll_fd, int add_fd, bool et);
 

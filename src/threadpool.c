@@ -187,7 +187,7 @@ static void *worker(void *arg)
 	threadpool_t *pool = (threadpool_t *) arg;
 	struct task task;
 
-	printf("thread: %lu\n", pthread_self());
+	printf("thread id: %lu\n", pthread_self());
 	for (;;) {
 		pthread_mutex_lock(&pool->lock);
 		while (pool->task_count == 0 && !pool->shutdown)
@@ -203,11 +203,7 @@ static void *worker(void *arg)
 			pool->task_head = 0;
 		pool->task_count--;
 		pthread_mutex_unlock(&pool->lock);
-		printf("begin handle_http\n");
 		(*task.fun) (task.arg);
-
-		printf
-		    ("\n--------------------------a task finish------------\n");
 	}
 	pool->thread_started--;
 

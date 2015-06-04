@@ -80,8 +80,6 @@ handle_get(int fd, char *url)
 		}
 		serve_dynamic(fd, filename, cgiargs);
 	}
-	printf
-	    ("\n--------------------------handle_http finish------------\n");
 	return;
 }
 
@@ -194,7 +192,6 @@ serve_dynamic(int fd, char *filename, char *cgiargs)
 		setenv("QUERY_STRING", cgiargs, 1);
 		dup2(fd, STDOUT_FILENO);
 		execve(filename, emptylist, environ);
-		printf("exece fail!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
 		sprintf(buf, "Bad argument\r\n");
 		writen(fd, buf, strlen(buf));
 		exit(0);	/*important!!, for execve fail */
